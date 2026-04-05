@@ -15,6 +15,7 @@ from telegram.ext import (
 )
 
 from config import BOT_TOKEN
+from handlers.alert import alert_command, alertscan_command, alertset_command
 from handlers.ai import ai_command
 from handlers.community import warn_command
 from handlers.errors import error_handler
@@ -59,6 +60,9 @@ def build_application() -> Application:
     app.add_handler(CommandHandler("summary", summary_command))
     app.add_handler(CommandHandler("report", report_command))
     app.add_handler(CommandHandler("scan", scan_command))
+    app.add_handler(CommandHandler("alert", alert_command))
+    app.add_handler(CommandHandler("alertset", alertset_command))
+    app.add_handler(CommandHandler("alertscan", alertscan_command))
     app.add_handler(CommandHandler("warn", warn_command))
     app.add_handler(MessageHandler(filters.COMMAND, unknown_command))
     app.add_error_handler(error_handler)

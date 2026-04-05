@@ -31,6 +31,7 @@ class MarketAnalysis:
     symbol: str
     pair: str
     interval: str
+    candles: list[dict]
     last_price: float
     price_change_24h: float
     high_price_24h: float
@@ -82,6 +83,7 @@ class MarketEngine:
             symbol=spot_context["symbol"],
             pair=spot_context["pair"],
             interval=interval,
+            candles=candles,
             last_price=ticker["last_price"],
             price_change_24h=ticker["price_change_pct"],
             high_price_24h=ticker["high_price"],

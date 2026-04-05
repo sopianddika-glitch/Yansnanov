@@ -18,6 +18,9 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         "/summary &lt;symbol&gt; - Generate an executive market summary\n"
         "/report &lt;symbol&gt; - Generate the full document-style report\n"
         "/scan - Scan the default watchlist for high-conviction setups\n"
+        "/alert &lt;symbol&gt; - Generate the current advanced alert report\n"
+        "/alertset &lt;symbol&gt; &lt;type&gt; - Register a scheduled alert filter\n"
+        "/alertscan - Scan subscriptions or the default alert watchlist\n"
         "/warn - Reply to a user's message to issue a warning"
     )
 
