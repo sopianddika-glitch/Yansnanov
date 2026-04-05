@@ -1,14 +1,16 @@
 # Yansnanov Bot
 
-Yansnanov Bot is a production-ready Telegram bot built with Python, `python-telegram-bot` v20, Gemini AI, and the Binance public API. The project uses a clean modular structure, async Telegram handlers, centralized logging, and a Railway-ready worker deployment setup.
+Yansnanov Bot is a modular Telegram trading and AI bot built with `python-telegram-bot` v20, `google-genai`, and a hybrid Binance plus Bybit market layer. The project is organized around thin async handlers, reusable services, centralized formatting helpers, and Railway-friendly startup behavior.
 
 ## Features
 
-- `/start` displays a welcome message and command list
-- `/ai <prompt>` sends a prompt to Gemini and returns the generated response
-- `/price <symbol>` fetches the latest Binance `USDT` spot price for a token such as `BTC` or `ETH`
-- `/warn` adds a reply-based warning count for community moderation
-- Centralized logging and a global error handler for safer production behavior
+- Core utilities: `/start`, `/help`, `/id`, `/ping`, `/time`
+- AI tools: `/ai`, `/summarize`, `/translate`
+- Market intelligence: `/price`, `/market`, `/signal`, `/summary`, `/report`, `/scan`
+- Alerting: `/alert`, `/alertset`, `/alertscan`
+- Sentiment and news: `/sentiment`, `/news`
+- Admin utilities: `/rules`, `/warn`, `/clean`, `/pin`
+- Global error handling, centralized logging, and environment-based config loading
 
 ## Project Structure
 
@@ -20,17 +22,34 @@ Yansnanov/
 |-- Procfile
 |-- README.md
 |-- handlers/
-|   |-- start.py
+|   |-- admin.py
 |   |-- ai.py
-|   |-- market.py
-|   |-- community.py
+|   |-- alert.py
+|   |-- core.py
 |   |-- errors.py
+|   |-- market.py
+|   |-- sentiment.py
 |-- services/
 |   |-- ai_service.py
-|   |-- market_service.py
+|   |-- alert_engine.py
+|   |-- alert_rules.py
+|   |-- alert_service.py
+|   |-- binance_service.py
+|   |-- bybit_service.py
+|   |-- data_binance.py
+|   |-- data_bybit.py
+|   |-- hybrid_service.py
+|   |-- indicators.py
+|   |-- market_engine.py
+|   |-- news_service.py
+|   |-- report_generator.py
+|   |-- report_service.py
+|   |-- sentiment_service.py
 |-- utils/
+|   |-- cache.py
+|   |-- config_loader.py
+|   |-- formatting.py
 |   |-- logger.py
-|   |-- middleware.py
 ```
 
 ## Installation
@@ -48,54 +67,70 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 export BOT_TOKEN="your-telegram-bot-token"
-export AI_KEY="your-gemini-api-key"
+export AI_KEY="your-google-genai-key"
 python main.py
 ```
 
-On Windows PowerShell, use:
+On Windows PowerShell:
 
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 $env:BOT_TOKEN="your-telegram-bot-token"
-$env:AI_KEY="your-gemini-api-key"
+$env:AI_KEY="your-google-genai-key"
 pip install -r requirements.txt
 python main.py
 ```
 
 ## Environment Variables
 
-The bot requires these variables at startup:
+Required:
 
-- `BOT_TOKEN`: Telegram BotFather token
-- `AI_KEY`: Gemini API key used by `google-genai`
+- `BOT_TOKEN`
+- `AI_KEY`
 
-The application fails fast if either variable is missing.
+Optional:
+
+- `BINANCE_KEY`
+- `BINANCE_SECRET`
+- `BYBIT_KEY`
+- `BYBIT_SECRET`
+- `NEWS_API_KEY`
+- `APP_TIMEZONE`
 
 ## Commands
 
 - `/start`
+- `/help`
+- `/id`
+- `/ping`
+- `/time`
 - `/ai <prompt>`
+- `/summarize <text>`
+- `/translate <language> | <text>`
 - `/price <symbol>`
-- `/warn` used as a reply to another user's message, optionally followed by a reason
-
-Examples:
-
-```text
-/ai Explain Bitcoin market cycles in simple terms
-/price btc
-/warn Please keep the chat respectful
-```
+- `/market <symbol>`
+- `/signal <symbol>`
+- `/summary <symbol>`
+- `/report <symbol>`
+- `/scan`
+- `/alert <symbol>`
+- `/alertset <symbol> <type>`
+- `/alertscan`
+- `/sentiment <symbol>`
+- `/news [symbol]`
+- `/rules`
+- `/warn` as a reply
+- `/clean` as a reply
+- `/pin` as a reply
 
 ## Railway Deployment
 
-1. Push this project to GitHub.
-2. Create a new Railway project and connect the GitHub repository.
-3. In Railway, add these environment variables:
-   - `BOT_TOKEN`
-   - `AI_KEY`
-4. Ensure the project is deployed as a worker service.
-5. Railway will use the `Procfile` entry below to start the bot:
+1. Push this repository to GitHub.
+2. Create a Railway project and connect the repository.
+3. Add the required environment variables in Railway.
+4. Deploy as a worker service.
+5. Railway starts the bot with:
 
 ```text
 worker: python3 main.py
@@ -103,6 +138,6 @@ worker: python3 main.py
 
 ## Notes
 
-- The warning system stores counts in memory, so warnings reset when the process restarts.
-- Binance prices are pulled from the public ticker endpoint and do not require authentication.
-- Gemini responses are generated through the Google Gen AI SDK with Gemini Flash models.
+- Market reporting combines Binance spot context with Bybit futures metadata when available.
+- News and sentiment services currently use a clean internal interface so external providers can be added without touching handlers.
+- Alerts and warning counts are stored in memory, so they reset on restart unless you later add persistent storage.
