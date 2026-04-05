@@ -18,6 +18,13 @@ from config import BOT_TOKEN
 from handlers.ai import ai_command
 from handlers.community import warn_command
 from handlers.errors import error_handler
+from handlers.market_advanced import (
+    market_command,
+    report_command,
+    scan_command,
+    signal_command,
+    summary_command,
+)
 from handlers.market import price_command
 from handlers.start import start_command
 from utils.middleware import post_init
@@ -47,6 +54,11 @@ def build_application() -> Application:
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("ai", ai_command))
     app.add_handler(CommandHandler("price", price_command))
+    app.add_handler(CommandHandler("market", market_command))
+    app.add_handler(CommandHandler("signal", signal_command))
+    app.add_handler(CommandHandler("summary", summary_command))
+    app.add_handler(CommandHandler("report", report_command))
+    app.add_handler(CommandHandler("scan", scan_command))
     app.add_handler(CommandHandler("warn", warn_command))
     app.add_handler(MessageHandler(filters.COMMAND, unknown_command))
     app.add_error_handler(error_handler)

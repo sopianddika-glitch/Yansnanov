@@ -13,6 +13,11 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         "/start - Show this message\n"
         "/ai &lt;prompt&gt; - Ask Gemini AI a question\n"
         "/price &lt;symbol&gt; - Get the latest Binance price in USDT\n"
+        "/market &lt;symbol&gt; - Generate the standard market intelligence report\n"
+        "/signal &lt;symbol&gt; - Generate a compact directional signal\n"
+        "/summary &lt;symbol&gt; - Generate an executive market summary\n"
+        "/report &lt;symbol&gt; - Generate the full document-style report\n"
+        "/scan - Scan the default watchlist for high-conviction setups\n"
         "/warn - Reply to a user's message to issue a warning"
     )
 
