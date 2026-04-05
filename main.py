@@ -5,7 +5,14 @@ setup_logging()
 import logging
 
 from telegram import Update
-from telegram.ext import Application, ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import (
+    Application,
+    ApplicationBuilder,
+    CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    filters,
+)
 
 from config import BOT_TOKEN
 from handlers.ai import ai_command
@@ -19,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle any unsupported command sent to the bot."""
+    """Reply to unsupported commands."""
     if update.effective_message is None:
         return
 
@@ -29,29 +36,29 @@ async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 
 def build_application() -> Application:
-    """Build the PTB v20+ application using ApplicationBuilder."""
-    application = (
+    """Create the PTB v20+ application."""
+    app = (
         ApplicationBuilder()
         .token(BOT_TOKEN)
         .post_init(post_init)
         .build()
     )
 
-    application.add_handler(CommandHandler("start", start_command))
-    application.add_handler(CommandHandler("ai", ai_command))
-    application.add_handler(CommandHandler("price", price_command))
-    application.add_handler(CommandHandler("warn", warn_command))
-    application.add_handler(MessageHandler(filters.COMMAND, unknown_command))
-    application.add_error_handler(error_handler)
+    app.add_handler(CommandHandler("start", start_command))
+    app.add_handler(CommandHandler("ai", ai_command))
+    app.add_handler(CommandHandler("price", price_command))
+    app.add_handler(CommandHandler("warn", warn_command))
+    app.add_handler(MessageHandler(filters.COMMAND, unknown_command))
+    app.add_error_handler(error_handler)
 
-    return application
+    return app
 
 
 def main() -> None:
-    """Start the Telegram bot with long polling."""
-    logger.info("Starting Yansnanov Bot with python-telegram-bot v20 polling")
-    application = build_application()
-    application.run_polling(
+    """Start the bot with long polling."""
+    logger.info("Starting Yansnanov Bot with ApplicationBuilder polling")
+    app = build_application()
+    app.run_polling(
         allowed_updates=Update.ALL_TYPES,
         drop_pending_updates=True,
     )
