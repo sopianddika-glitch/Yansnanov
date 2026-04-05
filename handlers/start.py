@@ -21,7 +21,13 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         "/alert &lt;symbol&gt; - Generate the current advanced alert report\n"
         "/alertset &lt;symbol&gt; &lt;type&gt; - Register a scheduled alert filter\n"
         "/alertscan - Scan subscriptions or the default alert watchlist\n"
-        "/warn - Reply to a user's message to issue a warning"
+        "/warn - Reply to a user's message to issue a warning\n\n"
+        "You can also talk to me naturally:\n"
+        "cek btc\n"
+        "buat laporan btc\n"
+        "scan market\n"
+        "market hari ini gimana?\n"
+        "ada potensi breakout ga?"
     )
 
     await update.effective_message.reply_text(message, parse_mode="HTML")

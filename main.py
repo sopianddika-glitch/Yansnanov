@@ -27,6 +27,7 @@ from handlers.market_advanced import (
     summary_command,
 )
 from handlers.market import price_command
+from handlers.nlp_router import natural_language_handler
 from handlers.start import start_command
 from utils.middleware import post_init
 
@@ -64,6 +65,7 @@ def build_application() -> Application:
     app.add_handler(CommandHandler("alertset", alertset_command))
     app.add_handler(CommandHandler("alertscan", alertscan_command))
     app.add_handler(CommandHandler("warn", warn_command))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, natural_language_handler))
     app.add_handler(MessageHandler(filters.COMMAND, unknown_command))
     app.add_error_handler(error_handler)
 
