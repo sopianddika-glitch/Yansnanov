@@ -1,13 +1,12 @@
-import logging
-
 from telegram import Update
 from telegram.constants import ChatAction
 from telegram.ext import ContextTypes
 
-from services.alert_engine import alert_engine
+from services.alert_service import alert_service
+from utils.formatting import chunk_text
+from utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
-MAX_MESSAGE_LENGTH = 3900
+logger = get_logger(__name__)
 
 
 async def alert_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -23,12 +22,10 @@ async def alert_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     await _send_typing(update, context)
 
     try:
-        report = await alert_engine.build_manual_alert_report(symbol)
+        report = await alert_service.build_alert_report(symbol)
     except Exception as exc:
         logger.exception("Manual alert generation failed for %s", symbol)
-        await update.effective_message.reply_text(
-            f"Unable to generate the alert report for {symbol.upper()}: {exc}"
-        )
+        await update.effective_message.reply_text(str(exc))
         return
 
     await _send_chunked_text(update, report)
@@ -48,9 +45,8 @@ async def alertset_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     symbol, alert_type = context.args[0], context.args[1]
 
     try:
-        subscription = alert_engine.set_alert_subscription(
-            context.application.bot_data,
-            update.effective_chat.id if update.effective_chat else 0,
+        subscription = alert_service.register_alert(
+            update.effective_user.id if update.effective_user else 0,
             symbol,
             alert_type,
         )
@@ -75,16 +71,13 @@ async def alertscan_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     if context.args:
         symbols = [item.strip().upper() for item in context.args if item.strip()]
     else:
-        chat_id = update.effective_chat.id if update.effective_chat else 0
-        symbols = list(alert_engine.get_chat_subscriptions(context.application.bot_data, chat_id).keys())
+        symbols = None
 
     try:
-        report = await alert_engine.build_scan_report(symbols=symbols or None)
+        report = await alert_service.build_scan_report(symbols=symbols or None)
     except Exception as exc:
         logger.exception("Alert scan failed.")
-        await update.effective_message.reply_text(
-            f"Unable to complete the alert scan right now: {exc}"
-        )
+        await update.effective_message.reply_text(str(exc))
         return
 
     await _send_chunked_text(update, report)
@@ -106,26 +99,5 @@ async def _send_chunked_text(update: Update, text: str) -> None:
     if update.effective_message is None:
         return
 
-    for chunk in _chunk_text(text):
+    for chunk in chunk_text(text):
         await update.effective_message.reply_text(chunk)
-
-
-def _chunk_text(text: str, chunk_size: int = MAX_MESSAGE_LENGTH) -> list[str]:
-    """Split long alert text into smaller messages."""
-    if len(text) <= chunk_size:
-        return [text]
-
-    chunks = []
-    start = 0
-    while start < len(text):
-        end = start + chunk_size
-        chunk = text[start:end]
-        if end < len(text):
-            split_at = chunk.rfind("\n")
-            if split_at > chunk_size // 2:
-                end = start + split_at
-                chunk = text[start:end]
-        chunks.append(chunk.strip())
-        start = end
-
-    return [chunk for chunk in chunks if chunk]

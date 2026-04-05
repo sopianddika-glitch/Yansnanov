@@ -3,10 +3,10 @@ import logging
 import google.genai as genai
 
 from config import AI_KEY
+from utils.logger import get_logger
 
-logger = logging.getLogger(__name__)
-PRIMARY_MODEL = "gemini-2.0-flash"
-FALLBACK_MODEL = "gemini-2.5-flash"
+logger = get_logger(__name__)
+MODEL_NAME = "gemini-2.0-flash"
 
 
 class GeminiAIService:
@@ -21,23 +21,37 @@ class GeminiAIService:
         if not prompt:
             raise RuntimeError("Please provide a prompt for the AI service.")
 
-        for model_name in (PRIMARY_MODEL, FALLBACK_MODEL):
-            try:
-                response = await self._client.aio.models.generate_content(
-                    model=model_name,
-                    contents=prompt,
-                )
-            except Exception as exc:
-                logger.warning("Gemini request failed for model %s: %s", model_name, exc)
-                continue
+        try:
+            response = await self._client.aio.models.generate_content(
+                model=MODEL_NAME,
+                contents=prompt,
+            )
+        except Exception as exc:
+            logger.warning("Gemini request failed for model %s: %s", MODEL_NAME, exc)
+            raise RuntimeError("The AI service is temporarily unavailable. Please try again later.") from exc
 
-            text = self._extract_text(response)
-            if text:
-                return text
+        text = self._extract_text(response)
+        if text:
+            return text
 
-            logger.warning("Gemini model %s returned an empty response.", model_name)
+        raise RuntimeError("The AI service returned an empty response. Please try again later.")
 
-        raise RuntimeError("The AI service is temporarily unavailable. Please try again later.")
+    async def summarize_text(self, text: str) -> str:
+        """Summarize arbitrary input text."""
+        prompt = (
+            "Summarize the following text in a concise, professional way.\n\n"
+            f"{text.strip()}"
+        )
+        return await self.generate_response(prompt)
+
+    async def translate_text(self, text: str, target_language: str) -> str:
+        """Translate text into the requested target language."""
+        prompt = (
+            f"Translate the following text into {target_language}. "
+            "Keep the meaning precise and preserve any financial terms.\n\n"
+            f"{text.strip()}"
+        )
+        return await self.generate_response(prompt)
 
     @staticmethod
     def _extract_text(response) -> str:
