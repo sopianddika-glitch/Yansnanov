@@ -5,7 +5,7 @@ setup_logging()
 import logging
 
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import Application, ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 
 from config import BOT_TOKEN
 from handlers.ai import ai_command
@@ -19,18 +19,23 @@ logger = logging.getLogger(__name__)
 
 
 async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Reply when the user sends a command that is not registered."""
+    """Handle any unsupported command sent to the bot."""
     if update.effective_message is None:
         return
 
     await update.effective_message.reply_text(
-        "I don't recognize that command yet. Use /start to see the available commands."
+        "Unknown command. Use /start to see the available commands."
     )
 
 
-def build_application():
-    """Create and configure the Telegram application."""
-    application = ApplicationBuilder().token(BOT_TOKEN).post_init(post_init).build()
+def build_application() -> Application:
+    """Build the PTB v20+ application using ApplicationBuilder."""
+    application = (
+        ApplicationBuilder()
+        .token(BOT_TOKEN)
+        .post_init(post_init)
+        .build()
+    )
 
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("ai", ai_command))
@@ -43,8 +48,8 @@ def build_application():
 
 
 def main() -> None:
-    """Start the bot with long polling."""
-    logger.info("Starting Yansnanov Bot")
+    """Start the Telegram bot with long polling."""
+    logger.info("Starting Yansnanov Bot with python-telegram-bot v20 polling")
     application = build_application()
     application.run_polling(
         allowed_updates=Update.ALL_TYPES,

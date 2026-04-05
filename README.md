@@ -68,7 +68,7 @@ python main.py
 The bot requires these variables at startup:
 
 - `BOT_TOKEN`: Telegram BotFather token
-- `AI_KEY`: Gemini API key used by `google-generativeai`
+- `AI_KEY`: Gemini API key used by `google-genai`
 
 The application fails fast if either variable is missing.
 
@@ -105,4 +105,4 @@ worker: python3 main.py
 
 - The warning system stores counts in memory, so warnings reset when the process restarts.
 - Binance prices are pulled from the public ticker endpoint and do not require authentication.
-- Gemini responses are generated through the `gemini-pro` model, as requested.
+- Gemini responses are generated through the Google Gen AI SDK with Gemini Flash models.
