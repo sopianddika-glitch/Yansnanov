@@ -1,13 +1,25 @@
-from utils.config_loader import get_optional_env, get_required_env, load_environment
+import os
 
-load_environment()
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover
+    load_dotenv = None
 
-BOT_TOKEN = get_required_env("BOT_TOKEN")
-AI_KEY = get_required_env("AI_KEY")
 
-BINANCE_KEY = get_optional_env("BINANCE_KEY")
-BINANCE_SECRET = get_optional_env("BINANCE_SECRET")
-BYBIT_KEY = get_optional_env("BYBIT_KEY")
-BYBIT_SECRET = get_optional_env("BYBIT_SECRET")
-NEWS_API_KEY = get_optional_env("NEWS_API_KEY")
-APP_TIMEZONE = get_optional_env("APP_TIMEZONE", "UTC")
+if load_dotenv is not None:
+    load_dotenv()
+
+
+def _required(name: str) -> str:
+    value = os.getenv(name)
+    if not value:
+        raise RuntimeError(f"Missing required environment variable: {name}")
+    return value
+
+
+BOT_TOKEN = _required("BOT_TOKEN")
+AI_KEY = _required("AI_KEY")
+BINANCE_KEY = os.getenv("BINANCE_KEY")
+BINANCE_SECRET = os.getenv("BINANCE_SECRET")
+BYBIT_KEY = os.getenv("BYBIT_KEY")
+BYBIT_SECRET = os.getenv("BYBIT_SECRET")

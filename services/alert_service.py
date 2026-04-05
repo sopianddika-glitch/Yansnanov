@@ -1,81 +1,78 @@
-from services.alert_rules import ALERT_CATEGORIES, ALERT_RULE_TYPES
-from services.alert_engine import alert_engine
-from utils.logger import get_logger
-
-logger = get_logger(__name__)
+from services.market_service import DEFAULT_SCAN_SYMBOLS, market_service
 
 
 class AlertService:
-    """Alert registry and scan interface for Telegram handlers."""
+    VALID_TYPES = {"breakout", "breakdown", "sudden_move", "deviation", "all"}
 
     def __init__(self) -> None:
         self._registry: dict[int, dict[str, set[str]]] = {}
 
     def register_alert(self, user_id: int, symbol: str, alert_type: str) -> dict:
-        """Register a symbol + alert type for a user."""
-        normalized_type = self.normalize_alert_type(alert_type)
-        normalized_symbol = alert_engine.normalize_symbol(symbol)
-
+        normalized_symbol = symbol.strip().upper().replace("USDT", "")
+        normalized_type = alert_type.strip().lower()
+        if normalized_type not in self.VALID_TYPES:
+            raise ValueError(
+                "Unsupported alert type. Use breakout, breakdown, sudden_move, deviation, or all."
+            )
+        types = (
+            {"breakout", "breakdown", "sudden_move", "deviation"}
+            if normalized_type == "all"
+            else {normalized_type}
+        )
         user_alerts = self._registry.setdefault(user_id, {})
-        symbol_alerts = user_alerts.setdefault(normalized_symbol, set())
-
-        if normalized_type == "all":
-            symbol_alerts.clear()
-            symbol_alerts.add("all")
-        else:
-            if "all" in symbol_alerts:
-                symbol_alerts.remove("all")
-            symbol_alerts.add(normalized_type)
-
-        return {
-            "user_id": user_id,
-            "symbol": normalized_symbol,
-            "types": sorted(symbol_alerts),
-        }
-
-    async def scan_alerts(self) -> list[str]:
-        """Scan all registered alerts and return text-ready triggered messages."""
-        watched_symbols = sorted({symbol for user_alerts in self._registry.values() for symbol in user_alerts})
-        results = await alert_engine.scan_symbols(symbols=watched_symbols or None)
-        messages = []
-
-        for user_id, symbol_map in self._registry.items():
-            for symbol, alert_filters in symbol_map.items():
-                if symbol not in results:
-                    continue
-
-                analysis, alerts = results[symbol]
-                matched = alert_engine.filter_alerts(alerts, alert_filters)
-                if matched:
-                    messages.append(
-                        alert_engine.format_alert_report(
-                            analysis,
-                            matched,
-                            heading=f"Alert Feed for User {user_id}",
-                        )
-                    )
-
-        return messages
+        existing = user_alerts.setdefault(normalized_symbol, set())
+        existing.update(types)
+        return {"user_id": user_id, "symbol": normalized_symbol, "types": sorted(existing)}
 
     async def build_alert_report(self, symbol: str) -> str:
-        """Build a one-off alert report for one symbol."""
-        return await alert_engine.build_manual_alert_report(symbol)
+        snapshot = await market_service.get_market_snapshot(symbol)
+        matches = self._evaluate_snapshot(snapshot)
+        if not matches:
+            return (
+                "Alert Report\n"
+                f"Instrument: {snapshot['pair']}\n"
+                "No active alert conditions are currently triggered."
+            )
+        lines = ["Alert Report", f"Instrument: {snapshot['pair']}"]
+        lines.extend(f"- {match}" for match in matches)
+        return "\n".join(lines)
 
-    async def build_scan_report(self, symbols: list[str] | None = None) -> str:
-        """Build an aggregate alert scan report."""
-        return await alert_engine.build_scan_report(symbols=symbols)
+    async def scan_alerts(self) -> list[str]:
+        messages: list[str] = []
+        for user_id, symbol_map in self._registry.items():
+            for symbol, types in symbol_map.items():
+                snapshot = await market_service.get_market_snapshot(symbol)
+                matches = self._evaluate_snapshot(snapshot, filters=types)
+                if matches:
+                    messages.append(f"User {user_id} | {snapshot['pair']} | {'; '.join(matches)}")
+        return messages
+
+    async def scan_watchlist(self, symbols: tuple[str, ...] | None = None) -> str:
+        snapshots = await market_service.scan_market(symbols or DEFAULT_SCAN_SYMBOLS)
+        lines = ["Alert Scan"]
+        for snapshot in snapshots:
+            matches = self._evaluate_snapshot(snapshot)
+            if matches:
+                lines.append(f"- {snapshot['pair']}: {'; '.join(matches)}")
+        if len(lines) == 1:
+            lines.append("No triggered alert conditions were found in the watchlist.")
+        return "\n".join(lines)
 
     @staticmethod
-    def normalize_alert_type(alert_type: str) -> str:
-        normalized = alert_type.strip().lower().replace("-", "_")
-        if normalized not in ALERT_CATEGORIES | ALERT_RULE_TYPES | {"all"}:
-            allowed = ", ".join(sorted(ALERT_CATEGORIES | ALERT_RULE_TYPES | {"all"}))
-            raise ValueError(f"Unknown alert type '{alert_type}'. Allowed values: {allowed}")
-        return normalized
-
-    def get_registry(self) -> dict[int, dict[str, set[str]]]:
-        """Expose registered alerts for debugging or admin use."""
-        return self._registry
+    def _evaluate_snapshot(snapshot: dict, filters: set[str] | None = None) -> list[str]:
+        active = filters or {"breakout", "breakdown", "sudden_move", "deviation"}
+        signals: list[str] = []
+        if "breakout" in active and snapshot["price"] >= snapshot["high_price"] * 0.997:
+            signals.append("breakout condition is active near the 24h high")
+        if "breakdown" in active and snapshot["price"] <= snapshot["low_price"] * 1.003:
+            signals.append("breakdown condition is active near the 24h low")
+        if "sudden_move" in active and abs(snapshot["change_percent"]) >= 3.0:
+            signals.append(f"sudden_move detected with {snapshot['change_percent']:+.2f}% 24h change")
+        if "deviation" in active and abs(snapshot["deviation_percent"]) >= 2.0:
+            signals.append(
+                f"deviation detected at {snapshot['deviation_percent']:+.2f}% versus weighted average"
+            )
+        return signals
 
 
 alert_service = AlertService()

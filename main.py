@@ -1,4 +1,4 @@
-from utils.logger import setup_logging
+from utils.logger import get_logger, setup_logging
 
 setup_logging()
 
@@ -13,37 +13,33 @@ from telegram.ext import (
 )
 
 from config import BOT_TOKEN
-from handlers.admin import clean_command, pin_command, rules_command, warn_command
 from handlers.ai import ai_command, summarize_command, translate_command
-from handlers.alert import alert_command, alertscan_command, alertset_command
-from handlers.core import help_command, id_command, ping_command, start_command, time_command
+from handlers.alert import alert_command
+from handlers.alertscan import alertscan_command
+from handlers.alertset import alertset_command
 from handlers.errors import error_handler
-from handlers.market import market_command, price_command, report_command, scan_command, signal_command, summary_command
-from handlers.sentiment import news_command, sentiment_command
-from utils.logger import get_logger
+from handlers.market import market_command, scan_command
+from handlers.price import price_command
+from handlers.report import report_command
+from handlers.signal import signal_command
+from handlers.start import help_command, start_command
+from handlers.summary import summary_command
+from utils.middleware import post_init
 
 logger = get_logger(__name__)
 
 
 async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Reply to unsupported commands."""
     if update.effective_message is None:
         return
-
     await update.effective_message.reply_text(
-        "Unknown command. Use /start to see the available commands."
+        "Unknown command. Use /help to see the available commands."
     )
 
 
-def build_application() -> Application:
-    """Create the PTB v20+ application."""
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-
+def register_handlers(app: Application) -> None:
     app.add_handler(CommandHandler("start", start_command))
     app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("id", id_command))
-    app.add_handler(CommandHandler("ping", ping_command))
-    app.add_handler(CommandHandler("time", time_command))
     app.add_handler(CommandHandler("ai", ai_command))
     app.add_handler(CommandHandler("summarize", summarize_command))
     app.add_handler(CommandHandler("translate", translate_command))
@@ -56,23 +52,20 @@ def build_application() -> Application:
     app.add_handler(CommandHandler("alert", alert_command))
     app.add_handler(CommandHandler("alertset", alertset_command))
     app.add_handler(CommandHandler("alertscan", alertscan_command))
-    app.add_handler(CommandHandler("sentiment", sentiment_command))
-    app.add_handler(CommandHandler("news", news_command))
-    app.add_handler(CommandHandler("rules", rules_command))
-    app.add_handler(CommandHandler("warn", warn_command))
-    app.add_handler(CommandHandler("clean", clean_command))
-    app.add_handler(CommandHandler("pin", pin_command))
     app.add_handler(MessageHandler(filters.COMMAND, unknown_command))
     app.add_error_handler(error_handler)
 
+
+def build_application() -> Application:
+    app = ApplicationBuilder().token(BOT_TOKEN).post_init(post_init).build()
+    register_handlers(app)
     return app
 
 
 def main() -> None:
-    """Start the bot with long polling."""
-    logger.info("Starting Yansnanov with modular PTB v20 architecture")
+    logger.info("Starting Yansnanov on python-telegram-bot with ApplicationBuilder")
     app = build_application()
-    app.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
+    app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
 
 
 if __name__ == "__main__":
